@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
@@ -19,7 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -45,8 +46,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    /**
+     * 发送验证码
+     */
     @Override
-    public Result sendCode(String phone, HttpSession session) {
+    public Result sendCode(String phone) {
         // 1.校验手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
             // 2.如果不符合，返回错误信息
@@ -64,8 +68,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         return Result.ok();
     }
 
+    /**
+     * 用户登录
+     */
     @Override
-    public Result login(LoginFormDTO loginForm, HttpSession session) {
+    public Result login(LoginFormDTO loginForm) {
         // 1.校验手机号
         String phone = loginForm.getPhone();
         if (RegexUtils.isPhoneInvalid(phone)) {
@@ -92,7 +99,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         // 7.保存用户信息到 redis中
         // 7.1.随机生成token，作为登录令牌
         String token = UUID.randomUUID().toString(true);
-        // 7.2.将User对象转为HashMap存储
+        // 7.2.将User对象转为HashMap存储：都得是String类型，比如Long类型的id字段 → String类型
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
                 CopyOptions.create()
@@ -106,6 +113,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 8.返回token
         return Result.ok(token);
+    }
+
+    /**
+     * 用手机号注册新用户
+     */
+    private User createUserWithPhone(String phone) {
+        // 1.创建用户
+        User user = new User();
+        user.setPhone(phone);
+        user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
+        // 2.保存用户
+        save(user);
+        return user;
+    }
+
+    /**
+     * 登出, 前端你会删除自己的header中的Authorization.
+     * 不能像原来那样 UserHolder.removeUser(), 跟没用一样. 本来这就是临时的.
+     * 关键是redis中删除.
+     * @return
+     */
+    @Override
+    public Result logout(HttpServletRequest httpServletRequest) {
+        String token = httpServletRequest.getHeader("authorization");
+        // 没有就不用清理
+        if (StrUtil.isBlank(token)) {
+            return Result.ok();
+        }
+
+        // 删除redis中User
+        String key  = LOGIN_USER_KEY + token;
+        Object[] hashKeys = stringRedisTemplate.opsForHash().keys(key).toArray();
+        stringRedisTemplate.opsForHash().delete(key, hashKeys);
+        return Result.ok();
     }
 
     @Override
@@ -164,15 +205,5 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             num >>>= 1;
         }
         return Result.ok(count);
-    }
-
-    private User createUserWithPhone(String phone) {
-        // 1.创建用户
-        User user = new User();
-        user.setPhone(phone);
-        user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
-        // 2.保存用户
-        save(user);
-        return user;
     }
 }
