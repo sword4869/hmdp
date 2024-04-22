@@ -45,13 +45,16 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     public void addSeckillVoucher(Voucher voucher) {
         // 保存优惠券
         save(voucher);
-        // 保存秒杀信息
+
+        // 保存秒杀券
         SeckillVoucher seckillVoucher = new SeckillVoucher();
         seckillVoucher.setVoucherId(voucher.getId());
         seckillVoucher.setStock(voucher.getStock());
+        // 创建时间和更新时间让mysql做，而生效和结束时间必须指定。
         seckillVoucher.setBeginTime(voucher.getBeginTime());
         seckillVoucher.setEndTime(voucher.getEndTime());
         seckillVoucherService.save(seckillVoucher);
+
         // 保存秒杀库存到Redis中
         stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());
     }

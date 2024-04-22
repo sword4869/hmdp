@@ -144,8 +144,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 删除redis中User
         String key  = LOGIN_USER_KEY + token;
-        Object[] hashKeys = stringRedisTemplate.opsForHash().keys(key).toArray();
-        stringRedisTemplate.opsForHash().delete(key, hashKeys);
+        stringRedisTemplate.delete(key);
         return Result.ok();
     }
 

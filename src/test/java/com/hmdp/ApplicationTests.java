@@ -24,7 +24,7 @@ import static com.hmdp.utils.RedisConstants.CACHE_SHOP_KEY;
 import static com.hmdp.utils.RedisConstants.SHOP_GEO_KEY;
 
 @SpringBootTest
-class HmDianPingApplicationTests {
+class ApplicationTests {
 
     @Resource
     private CacheClient cacheClient;

@@ -22,12 +22,17 @@ import java.util.List;
 @RequestMapping("/shop-type")
 public class ShopTypeController {
     @Resource
-    private IShopTypeService typeService;
+    private IShopTypeService shopTypeService;
 
+    /**
+     * 缓存店铺类型信息
+     */
     @GetMapping("list")
-    public Result queryTypeList() {
-        List<ShopType> typeList = typeService
-                .query().orderByAsc("sort").list();
-        return Result.ok(typeList);
+    public Result queryShopTypes() {
+        List<ShopType> shopTypes = shopTypeService.queryShopTypes();
+        if(shopTypes == null){
+            return Result.fail("店铺类型不存在");
+        }
+        return Result.ok(shopTypes);
     }
 }

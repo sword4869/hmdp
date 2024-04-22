@@ -34,8 +34,6 @@ import static com.hmdp.utils.RedisConstants.*;
  */
 @Service
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
-
-
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
@@ -44,28 +42,27 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Override
     public Result queryById(Long id) {
-        // 解决缓存穿透
+        // 只解决缓存穿透
+        // Shop shop = cacheClient
+        //         .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+
+        // 逻辑过期解决缓存击穿, 靠预热排除不存在的数据
+        // Shop shop = cacheClient
+        //         .queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_EXPIRE_TIME, TimeUnit.SECONDS);
+
+        // 互斥锁解决缓存击穿 + 缓存穿透的缓存空值
         Shop shop = cacheClient
-                .queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
-
-        // 互斥锁解决缓存击穿
-        // Shop shop = cacheClient
-        //         .queryWithMutex(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
-
-        // 逻辑过期解决缓存击穿
-        // Shop shop = cacheClient
-        //         .queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, 20L, TimeUnit.SECONDS);
+                .queryWithMutex(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
 
         if (shop == null) {
             return Result.fail("店铺不存在！");
         }
-        // 7.返回
         return Result.ok(shop);
     }
 
     @Override
     @Transactional
-    public Result update(Shop shop) {
+    public Result updateShop(Shop shop) {
         Long id = shop.getId();
         if (id == null) {
             return Result.fail("店铺id不能为空");
