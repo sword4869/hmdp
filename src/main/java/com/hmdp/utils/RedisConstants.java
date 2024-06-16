@@ -30,8 +30,10 @@ public class RedisConstants {
     public static final String LOCK_SHOP_TYPE_KEY = "lock:shopType";
     public static final Long LOCK_SHOP_TYPE_TTL = 10L;
 
-    // 秒杀券，
+    // 某voucherId的秒杀券，在redis中的剩余库存
     public static final String SECKILL_STOCK_KEY = "seckill:stock:";
+
+    // blog
     public static final String BLOG_LIKED_KEY = "blog:liked:";
     public static final String FEED_KEY = "feed:";
     public static final String SHOP_GEO_KEY = "shop:geo:";
